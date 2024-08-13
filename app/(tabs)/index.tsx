@@ -186,7 +186,7 @@ function FaceDetection(): JSX.Element {
 
   const plugin = useTensorflowModel(require('../../assets/pose-detection-fast.tflite'))
 
-  const frameProcessor = useSkiaFrameProcessor((frame) => {
+  const frameProcessor = useSkiaFrameProcessor((frame: any) => {
     'worklet'
     if (plugin.state === "loaded") {
       const resized = resize(frame, 192, 192)
