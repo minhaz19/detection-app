@@ -8,6 +8,7 @@ import {
   useCameraDevice,
   useCameraPermission,
   useFrameProcessor,
+  useSkiaFrameProcessor,
 } from 'react-native-vision-camera';
 import { useIsFocused } from '@react-navigation/core';
 import { useAppState } from '@react-native-community/hooks';
@@ -24,6 +25,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import Canvas from 'react-native-canvas';
 import { useTextRecognition, Camera, useTranslate } from "react-native-vision-camera-text-recognition";
+import { useTensorflowModel } from 'react-native-fast-tflite';
+import { resize } from '@/components/resize';
+// import { Skia } from '@shopify/react-native-skia';
 /**
  * Entry point component
  *
@@ -58,6 +62,10 @@ function FaceDetection(): JSX.Element {
   const appState = useAppState();
   const isCameraActive = !cameraPaused && isFocused && appState === 'active';
   const cameraDevice = useCameraDevice(facingFront ? 'front' : 'back');
+
+
+  // const paint = Skia.Paint()
+  // paint.setColor(Skia.Color('red'))
 
 
   // vision camera ref
@@ -176,15 +184,25 @@ function FaceDetection(): JSX.Element {
     }
   };
 
-  const options = {
-   language: 'devanagari'
-  }
-  const { scanText } = useTextRecognition(options)
-  const scanTextFrameProcessor = useFrameProcessor((frame) => {
+  const plugin = useTensorflowModel(require('../../assets/pose-detection-fast.tflite'))
+
+  const frameProcessor = useSkiaFrameProcessor((frame: any) => {
     'worklet'
-    const data = scanText(frame)
-    console.log(JSON.stringify(data, null, 4), 'recognize')
-  }, [])
+    if (plugin.state === "loaded") {
+      const resized = resize(frame, 192, 192)
+      const outputs = plugin.model.runSync([resized])
+      console.log(`Received ${outputs.length} outputs!`)
+    }
+  }, [plugin])
+  // const options = {
+  //  language: 'devanagari'
+  // }
+  // const { scanText } = useTextRecognition(options)
+  // const scanTextFrameProcessor = useFrameProcessor((frame) => {
+  //   'worklet'
+  //   const data = scanText(frame)
+  //   console.log(JSON.stringify(data, null, 4), 'recognize')
+  // }, [])
 
   // const { translate } = useTranslate(options)
   // const translateFrameProcessor = useFrameProcessor((frame) => {
@@ -220,8 +238,9 @@ function FaceDetection(): JSX.Element {
                   //   ...faceDetectionOptions,
                   //   autoScale,
                   // }}
-                  mode={'recognize'}
-                  frameProcessor={scanTextFrameProcessor}
+                  // mode={'recognize'}
+                  pixelFormat="rgb"
+                  frameProcessor={frameProcessor}
 
                 />
 
